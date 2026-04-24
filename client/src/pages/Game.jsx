@@ -24,16 +24,26 @@ export default function Game({ player, room, myHand, myScore, emit, on, off, onL
 
   /* Turn countdown */
   useEffect(() => {
+    let interval = null;
     const unsub = on('turn_timer', ({ deadline }) => {
+      if (interval) clearInterval(interval);
+      
       const tick = () => {
         const left = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
         setTimer(left);
-        if (left > 0) setTimeout(tick, 500);
-        else setTimer(null);
+        if (left <= 0) {
+          setTimer(null);
+          if (interval) clearInterval(interval);
+        }
       };
+      
       tick();
+      interval = setInterval(tick, 1000); // Ticking once per second is enough
     });
-    return () => off('turn_timer', unsub);
+    return () => {
+      off('turn_timer', unsub);
+      if (interval) clearInterval(interval);
+    };
   }, [on, off]);
 
   /* Deal Animation Sequence */
@@ -181,7 +191,8 @@ export default function Game({ player, room, myHand, myScore, emit, on, off, onL
           {allPlayers.map(p => {
             const isMe      = p.id === player.playerId;
             const isCurrent = room.currentTurnPlayerId === p.id && phase === 'playing';
-            const hand      = isMe ? (myHand || []) : Array(p.handSize).fill({ faceDown:true });
+            // Ahora mostramos la mano pública para todos, fallback a myHand si es el usuario actual
+            const hand      = (isMe ? (myHand || p.hand) : p.hand) || [];
             const score     = isMe ? (myScore ?? p.score) : p.score;
 
             return (
@@ -251,7 +262,7 @@ export default function Game({ player, room, myHand, myScore, emit, on, off, onL
         {/* BETTING */}
         {phase === 'betting' && myStatus === 'betting' && (
           <div style={{ display:'flex', flexDirection:'column', gap:14, alignItems:'center' }}>
-            {player.chips < 10000 && bet === 0 ? (
+            {myChips < 10000 && bet === 0 ? (
               <div style={{ textAlign: 'center' }}>
                 <p style={{ color: 'var(--red-bright)', marginBottom: 12, fontWeight: 600, fontSize: 16 }}>¡Te quedaste sin fondos!</p>
                 <button className="btn btn-gold btn-xl" onClick={() => emit('restock_chips')}>

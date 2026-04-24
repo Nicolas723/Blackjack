@@ -76,6 +76,7 @@ function registerHandlers(io, socket) {
         status      : p.status,
         isReady     : p.isReady,
         isConnected : p.isConnected,
+        hand        : p.hand,
         handSize    : p.hand.length,
         score       : revealScore ? p.score : null,
       };
