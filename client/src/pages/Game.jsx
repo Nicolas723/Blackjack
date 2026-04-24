@@ -114,6 +114,16 @@ export default function Game({ player, room, myHand, myScore, emit, on, off, onL
     }
   }, [phase]);
 
+  useEffect(() => {
+    try {
+      if (window.adsbygoogle) {
+        window.adsbygoogle.push({});
+      }
+    } catch (e) {
+      console.error('Ads error', e);
+    }
+  }, [phase]);
+
   const addChip = v => {
     const next = bet + v;
     if (next <= Math.min(1000000, myChips)) setBet(next);
@@ -381,19 +391,18 @@ export default function Game({ player, room, myHand, myScore, emit, on, off, onL
       <div style={{
         background: 'var(--surface-hi)',
         borderTop: '1px solid var(--border)',
-        height: 60,
+        minHeight: 90,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        color: 'var(--text-dim)',
-        fontSize: 12,
-        letterSpacing: 1,
-        textTransform: 'uppercase',
-        flexShrink: 0
+        flexShrink: 0,
+        overflow: 'hidden'
       }}>
-        <div style={{ opacity: 0.5, border: '1px dashed var(--border)', padding: '4px 20px', borderRadius: 4 }}>
-          Publicidad / Ad Banner Placeholder
-        </div>
+        {/* Google AdSense Banner */}
+        <ins className="adsbygoogle"
+             style={{ display:'inline-block', width:'728px', height:'90px' }}
+             data-ad-client="ca-pub-6583856496198486"
+             data-ad-slot="auto"></ins>
       </div>
     </div>
   );
