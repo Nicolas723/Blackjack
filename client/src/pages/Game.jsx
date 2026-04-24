@@ -126,7 +126,7 @@ export default function Game({ player, room, myHand, myScore, emit, on, off, onL
 
   const addChip = v => {
     const next = bet + v;
-    if (next <= Math.min(1000000, myChips)) setBet(next);
+    if (next <= myChips) setBet(next);
   };
   const placeBet = () => { if (bet >= 10000) { emit('place_bet', { amount: bet }); setBet(0); } };
   const act      = a  => emit('player_action', { action: a });
@@ -318,7 +318,10 @@ export default function Game({ player, room, myHand, myScore, emit, on, off, onL
                 </div>
                 <div style={{ display:'flex', alignItems:'center', gap:16 }}>
                   <span className="bet-display">{bet > 0 ? bet.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }) : '–'}</span>
-                  <button className="btn btn-ghost btn-sm" onClick={() => setBet(0)} disabled={bet === 0}>Clear</button>
+                  <div style={{ display:'flex', gap:8 }}>
+                    <button className="btn btn-ghost btn-sm" onClick={() => setBet(0)} disabled={bet === 0}>Clear</button>
+                    <button className="btn btn-ghost btn-sm" style={{ color:'var(--gold-light)' }} onClick={() => setBet(myChips)} disabled={myChips === 0}>All In</button>
+                  </div>
                   <button id="place-bet-btn" className="btn btn-gold btn-xl" onClick={placeBet} disabled={bet < 10000}>
                     Confirm Bet
                   </button>
