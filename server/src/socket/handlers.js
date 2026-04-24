@@ -357,7 +357,6 @@ function registerHandlers(io, socket) {
 
     const room = code ? rm.getRoomByCode(code) : rm.getRoom(roomId);
     if (!room) throw Errors.ROOM_NOT_FOUND();
-    if (room.phase !== 'lobby') throw Errors.GAME_STARTED();
     if (Object.keys(room.players).length >= room.maxPlayers) throw Errors.ROOM_FULL();
 
     rm.addPlayer(room, p);
@@ -378,7 +377,29 @@ function registerHandlers(io, socket) {
     broadcast(room);
 
     const connected = Object.values(room.players).filter(x => x.isConnected);
-    if (connected.length >= 1 && connected.every(x => x.isReady)) startBetting(room);
+    // Un jugador puede saltarse la ronda marcándose como "skip"
+    if (connected.length >= 1 && connected.every(x => x.isReady || x.status === 'skip')) {
+      startBetting(room);
+    }
+  }));
+
+  socket.on('skip_round', safe(() => {
+    const p    = requirePlayer();
+    const room = requireRoom(['lobby', 'betting']);
+    p.status  = 'skip';
+    p.isReady = false;
+    p.bet     = 0;
+    
+    log.info('Player skipping round', { roomId: room.id, username: p.username });
+    broadcast(room);
+    
+    // Check if we can start betting phase if everyone else is ready
+    if (room.phase === 'lobby') {
+      const connected = Object.values(room.players).filter(x => x.isConnected);
+      if (connected.length >= 1 && connected.every(x => x.isReady || x.status === 'skip')) {
+        startBetting(room);
+      }
+    }
   }));
 
   socket.on('place_bet', safe(({ amount } = {}) => {
@@ -393,8 +414,10 @@ function registerHandlers(io, socket) {
     log.info('Bet placed', { roomId: room.id, username: p.username, bet });
     broadcast(room);
 
-    const active = Object.values(room.players).filter(x => x.isConnected);
-    if (active.every(x => x.bet > 0)) startPlaying(room);
+    const active = Object.values(room.players).filter(x => x.isConnected && x.status !== 'skip');
+    if (active.length > 0 && active.every(x => x.bet > 0)) {
+      startPlaying(room);
+    }
   }));
 
   socket.on('restock_chips', safe(() => {

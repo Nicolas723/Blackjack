@@ -15,6 +15,16 @@ export default function Game({ player, room, myHand, myScore, emit, on, off, onL
   const [toast, setToast] = useState('');
   const [result, setResult] = useState('');
   const [dealProgress, setDealProgress] = useState(999);
+  const [isWatchingAd, setIsWatchingAd] = useState(false);
+
+  const startAd = () => {
+    setIsWatchingAd(true);
+    setTimeout(() => {
+      setIsWatchingAd(false);
+      emit('restock_chips');
+      setToast('💰 ¡Felicidades! Has recibido $1.000.000 por ver el anuncio.');
+    }, 4000); // 4 second simulation
+  };
 
   const phase      = room.phase;
   const isMyTurn   = room.currentTurnPlayerId === player.playerId;
@@ -120,6 +130,22 @@ export default function Game({ player, room, myHand, myScore, emit, on, off, onL
     <div style={{ minHeight:'100vh', display:'flex', flexDirection:'column', background:'radial-gradient(ellipse 160% 120% at 50% 0%, var(--felt-mid) 0%, var(--felt-dark) 70%)' }}>
       {toast  && <div className="toast">{toast}</div>}
       {result && <div className="toast" style={{ borderColor:'var(--gold-light)', color:'var(--gold-light)' }}>{result}</div>}
+
+      {isWatchingAd && (
+        <div style={{
+          position:'fixed', inset:0, zIndex:999, background:'rgba(0,0,0,0.95)',
+          display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:24
+        }}>
+          <div className="display-md" style={{ color:'var(--gold)' }}>Anuncio en curso...</div>
+          <div style={{ width:200, height:6, background:'rgba(255,255,255,0.1)', borderRadius:3, overflow:'hidden' }}>
+            <div className="progress-bar-fill" style={{ height:'100%', background:'var(--gold)', animation:'progress 4s linear' }} />
+          </div>
+          <p style={{ color:'var(--text-dim)', fontSize:14 }}>Recibirás tus fichas al finalizar el video</p>
+          <style>{`
+            @keyframes progress { from { width: 0; } to { width: 100%; } }
+          `}</style>
+        </div>
+      )}
 
       {/* ── Nav bar ───────────────────────────────────────────── */}
       <div style={{
@@ -237,6 +263,7 @@ export default function Game({ player, room, myHand, myScore, emit, on, off, onL
                   {p.status === 'standing'  && <span className="pill pill-muted">Standing</span>}
                   {p.status === 'bust'      && <span className="pill pill-red">Bust</span>}
                   {p.status === 'blackjack' && <span className="pill pill-gold">Blackjack!</span>}
+                  {p.status === 'skip'      && <span className="pill pill-muted">Observando</span>}
                 </div>
 
                 {/* Round result */}
@@ -265,8 +292,8 @@ export default function Game({ player, room, myHand, myScore, emit, on, off, onL
             {myChips < 10000 && bet === 0 ? (
               <div style={{ textAlign: 'center' }}>
                 <p style={{ color: 'var(--red-bright)', marginBottom: 12, fontWeight: 600, fontSize: 16 }}>¡Te quedaste sin fondos!</p>
-                <button className="btn btn-gold btn-xl" onClick={() => emit('restock_chips')}>
-                  Recargar $1.000.000
+                <button className="btn btn-gold btn-xl" onClick={startAd}>
+                  🎬 Ver anuncio para recargar
                 </button>
               </div>
             ) : (
@@ -286,6 +313,9 @@ export default function Game({ player, room, myHand, myScore, emit, on, off, onL
                     Confirm Bet
                   </button>
                 </div>
+                <button className="btn btn-ghost btn-sm" style={{ marginTop: 8 }} onClick={() => emit('skip_round')}>
+                  Saltar esta ronda
+                </button>
               </>
             )}
           </div>
@@ -345,6 +375,25 @@ export default function Game({ player, room, myHand, myScore, emit, on, off, onL
             ⏳ Next round starting in a few seconds…
           </div>
         )}
+      </div>
+
+      {/* ── Ad Banner ────────────────────────────────────────── */}
+      <div style={{
+        background: 'var(--surface-hi)',
+        borderTop: '1px solid var(--border)',
+        height: 60,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: 'var(--text-dim)',
+        fontSize: 12,
+        letterSpacing: 1,
+        textTransform: 'uppercase',
+        flexShrink: 0
+      }}>
+        <div style={{ opacity: 0.5, border: '1px dashed var(--border)', padding: '4px 20px', borderRadius: 4 }}>
+          Publicidad / Ad Banner Placeholder
+        </div>
       </div>
     </div>
   );
