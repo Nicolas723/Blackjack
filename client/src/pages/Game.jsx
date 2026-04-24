@@ -105,7 +105,7 @@ export default function Game({ player, room, myHand, myScore, emit, on, off, onL
     return () => off('error', h);
   }, []);
 
-  /* Flash result */
+  useEffect(() => {
     if (phase === 'results' && room.results?.[player.playerId]) {
       const r = room.results[player.playerId];
       const map = { win:'🎉 ¡Ganaste!', blackjack:'🌟 ¡Blackjack!', push:'🤝 Empate', bust:'💥 ¡Pasado!', loss:'😔 El Dealer gana' };
