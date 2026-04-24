@@ -12,6 +12,7 @@
 const rm         = require('../rooms/roomManager');
 const ge         = require('../game/gameEngine');
 const logger     = require('../utils/logger');
+const storage    = require('../utils/storage');
 const { handleError, Errors } = require('../utils/errors');
 const {
   validateUsername,
@@ -105,7 +106,18 @@ function registerHandlers(io, socket) {
   }
 
   function broadcast(room) {
-    io.to(room.id).emit('room_state', publicRoom(room));
+    io.to(room.id).emit('room_update', { room: publicRoom(room) });
+    
+    // Save all player chips to persistence
+    const savedData = storage.load();
+    let changed = false;
+    for (const p of Object.values(room.players)) {
+      if (savedData[p.username] !== p.chips) {
+        savedData[p.username] = p.chips;
+        changed = true;
+      }
+    }
+    if (changed) storage.save(savedData);
   }
 
   function sendPrivateHand(room, pid) {
@@ -167,16 +179,35 @@ function registerHandlers(io, socket) {
     }
   }
 
-  /** Dealer draws to 17, computes results, broadcasts */
+  /** Dealer turns: Reveal card and draw one by one with delay */
   function runDealer(room) {
-    log.info('Dealer turn starting', { roomId: room.id });
-    const results  = ge.dealerPlay(room);
-    room.phase     = 'results';
-    room.results   = results;
-    broadcast(room);
-    log.info('Round results emitted', { roomId: room.id, results });
+    if (room.phase !== 'dealer_turn') {
+      room.phase = 'dealer_turn';
+      // Reveal hole card
+      if (room.dealerHand[1]) room.dealerHand[1].faceDown = false;
+      room.dealerScore = ge.calculateScore(room.dealerHand);
+      broadcast(room);
+    }
 
-    setTimeout(() => resetToBetting(room), RESET_MS);
+    setTimeout(() => {
+      // Refresh room object to check if it still exists
+      const r = rm.getRoom(room.id);
+      if (!r) return;
+
+      if (r.dealerScore < 17) {
+        ge.dealerDraw(r);
+        broadcast(r);
+        runDealer(r); // Draw next card
+      } else {
+        // All cards drawn, evaluate
+        const results = ge.evaluateResults(r);
+        r.phase       = 'results';
+        r.results     = results;
+        broadcast(r);
+        log.info('Round results emitted', { roomId: r.id, results });
+        setTimeout(() => resetToBetting(r), RESET_MS);
+      }
+    }, 1200); // Slower delay (1.2s) as requested
   }
 
   /** Reset room to betting phase for the next round */
@@ -315,11 +346,15 @@ function registerHandlers(io, socket) {
     const name = validateUsername(username);
     const sessionId = crypto.randomUUID();
 
+    const savedData = storage.load();
+    const chips     = savedData[name] !== undefined ? savedData[name] : START_CHIPS;
+
     const player = {
       id          : sessionId,
       username    : name,
-      chips       : START_CHIPS,
+      chips       : chips,
       bet         : 0,
+      sideBets    : { perfectPairs: 0, insurance: 0, twentyOnePlusThree: 0, bustBonus: 0 },
       hand        : [],
       score       : 0,
       status      : 'waiting',
@@ -328,6 +363,10 @@ function registerHandlers(io, socket) {
       currentRoomId: null,
     };
     players.set(sessionId, player);
+    
+    // Save immediately
+    savedData[name] = chips;
+    storage.save(savedData);
     socketIdToSessionId.set(socket.id, sessionId);
     sessionIdToSocketId.set(sessionId, socket.id);
     log.info('Player registered', { username: name, sessionId });
@@ -413,13 +452,27 @@ function registerHandlers(io, socket) {
     }
   }));
 
-  socket.on('place_bet', safe(({ amount } = {}) => {
+  socket.on('place_bet', safe((payload = {}) => {
+    const { amount, sideBets } = payload;
     const p    = requirePlayer();
     const room = requireRoom(PHASE_GUARDS.place_bet);
     const bet  = validateBet(amount, p.chips, MIN_BET, MAX_BET);
 
     p.bet    = bet;
     p.chips -= bet;
+    
+    // Side bets
+    if (sideBets) {
+      const { perfectPairs = 0, twentyOnePlusThree = 0, bustBonus = 0 } = sideBets;
+      const totalSide = perfectPairs + twentyOnePlusThree + bustBonus;
+      if (totalSide <= p.chips) {
+        p.sideBets.perfectPairs = perfectPairs;
+        p.sideBets.twentyOnePlusThree = twentyOnePlusThree;
+        p.sideBets.bustBonus = bustBonus;
+        p.chips -= totalSide;
+      }
+    }
+
     p.status = 'ready';
 
     log.info('Bet placed', { roomId: room.id, username: p.username, bet });

@@ -16,6 +16,7 @@ export default function Game({ player, room, myHand, myScore, emit, on, off, onL
   const [result, setResult] = useState('');
   const [dealProgress, setDealProgress] = useState(999);
   const [isWatchingAd, setIsWatchingAd] = useState(false);
+  const [sideBets, setSideBets] = useState({ perfectPairs: 0, twentyOnePlusThree: 0, bustBonus: 0 });
 
   const startAd = () => {
     setIsWatchingAd(true);
@@ -23,6 +24,7 @@ export default function Game({ player, room, myHand, myScore, emit, on, off, onL
       setIsWatchingAd(false);
       emit('restock_chips');
       setToast('💰 ¡Felicidades! Has recibido $1.000.000 por ver el anuncio.');
+      setTimeout(() => setToast(''), 4000); // Clear after 4s
     }, 4000); // 4 second simulation
   };
 
@@ -128,7 +130,13 @@ export default function Game({ player, room, myHand, myScore, emit, on, off, onL
     const next = bet + v;
     if (next <= myChips) setBet(next);
   };
-  const placeBet = () => { if (bet >= 10000) { emit('place_bet', { amount: bet }); setBet(0); } };
+  const placeBet = () => { 
+    if (bet >= 10000) { 
+      emit('place_bet', { amount: bet, sideBets }); 
+      setBet(0); 
+      setSideBets({ perfectPairs: 0, twentyOnePlusThree: 0, bustBonus: 0 });
+    } 
+  };
   const act      = a  => emit('player_action', { action: a });
 
   const allPlayers  = Object.values(room.players || {});
@@ -323,8 +331,83 @@ export default function Game({ player, room, myHand, myScore, emit, on, off, onL
                     </div>
                   ))}
                 </div>
-                <div style={{ display:'flex', alignItems:'center', gap:16 }}>
-                  <span className="bet-display">{bet > 0 ? bet.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }) : '–'}</span>
+                {/* Side Bets UI */}
+                <div style={{ display:'flex', gap:10, marginBottom:16, flexWrap:'wrap', justifyContent:'center' }}>
+                  <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:6 }}>
+                    <span style={{ fontSize:10, color:'#3b82f6', fontWeight:800, letterSpacing:'0.05em' }}>PERFECT PAIRS</span>
+                    <button 
+                      className="btn btn-sm" 
+                      style={{ 
+                        background: sideBets.perfectPairs > 0 ? '#3b82f6' : 'rgba(59,130,246,0.1)',
+                        border: `1px solid ${sideBets.perfectPairs > 0 ? '#3b82f6' : 'rgba(59,130,246,0.3)'}`,
+                        color: sideBets.perfectPairs > 0 ? '#fff' : '#3b82f6',
+                        minWidth: 80, borderRadius: 8, transition: 'all 0.2s'
+                      }}
+                      onClick={() => {
+                        const v = Math.min(10000, myChips); // Default 10k for side bets
+                        setSideBets(s => ({ ...s, perfectPairs: s.perfectPairs > 0 ? 0 : v }));
+                      }}
+                    >
+                      {sideBets.perfectPairs > 0 ? sideBets.perfectPairs.toLocaleString() : '+ Bet'}
+                    </button>
+                  </div>
+                  <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:6 }}>
+                    <span style={{ fontSize:10, color:'#10b981', fontWeight:800, letterSpacing:'0.05em' }}>21 + 3</span>
+                    <button 
+                      className="btn btn-sm" 
+                      style={{ 
+                        background: sideBets.twentyOnePlusThree > 0 ? '#10b981' : 'rgba(16,185,129,0.1)',
+                        border: `1px solid ${sideBets.twentyOnePlusThree > 0 ? '#10b981' : 'rgba(16,185,129,0.3)'}`,
+                        color: sideBets.twentyOnePlusThree > 0 ? '#fff' : '#10b981',
+                        minWidth: 80, borderRadius: 8, transition: 'all 0.2s'
+                      }}
+                      onClick={() => {
+                        const v = Math.min(10000, myChips);
+                        setSideBets(s => ({ ...s, twentyOnePlusThree: s.twentyOnePlusThree > 0 ? 0 : v }));
+                      }}
+                    >
+                      {sideBets.twentyOnePlusThree > 0 ? sideBets.twentyOnePlusThree.toLocaleString() : '+ Bet'}
+                    </button>
+                  </div>
+                  <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:6 }}>
+                    <span style={{ fontSize:10, color:'#ef4444', fontWeight:800, letterSpacing:'0.05em' }}>BUST BONUS</span>
+                    <button 
+                      className="btn btn-sm" 
+                      style={{ 
+                        background: sideBets.bustBonus > 0 ? '#ef4444' : 'rgba(239,68,68,0.1)',
+                        border: `1px solid ${sideBets.bustBonus > 0 ? '#ef4444' : 'rgba(239,68,68,0.3)'}`,
+                        color: sideBets.bustBonus > 0 ? '#fff' : '#ef4444',
+                        minWidth: 80, borderRadius: 8, transition: 'all 0.2s'
+                      }}
+                      onClick={() => {
+                        const v = Math.min(10000, myChips);
+                        setSideBets(s => ({ ...s, bustBonus: s.bustBonus > 0 ? 0 : v }));
+                      }}
+                    >
+                      {sideBets.bustBonus > 0 ? sideBets.bustBonus.toLocaleString() : '+ Bet'}
+                    </button>
+                  </div>
+                </div>
+
+                <div style={{ display:'flex', alignItems:'center', gap:12, flexWrap:'wrap', justifyContent:'center' }}>
+                  <div style={{ position:'relative', display:'flex', alignItems:'center' }}>
+                    <span style={{ position:'absolute', left:14, color:'var(--gold)', fontWeight:700 }}>$</span>
+                    <input 
+                      type="number"
+                      value={bet || ''}
+                      onChange={e => {
+                        const v = parseInt(e.target.value) || 0;
+                        if (v <= myChips) setBet(v);
+                      }}
+                      placeholder="Cantidad..."
+                      className="bet-input"
+                      style={{ 
+                        width:160, background:'rgba(0,0,0,.4)', border:'1px solid var(--border)',
+                        borderRadius:10, padding:'10px 14px 10px 28px', color:'var(--cream)',
+                        fontSize:16, fontWeight:600, outline:'none'
+                      }}
+                    />
+                  </div>
                   <div style={{ display:'flex', gap:8 }}>
                     <button className="btn btn-ghost btn-sm" onClick={() => setBet(0)} disabled={bet === 0}>Clear</button>
                     <button className="btn btn-ghost btn-sm" style={{ color:'var(--gold-light)' }} onClick={() => setBet(myChips)} disabled={myChips === 0}>All In</button>
@@ -344,6 +427,30 @@ export default function Game({ player, room, myHand, myScore, emit, on, off, onL
         {phase === 'betting' && myStatus !== 'betting' && (
           <div style={{ textAlign:'center', color:'var(--text-muted)', fontSize:14 }}>
             ⏳ Waiting for other players to bet…
+          </div>
+        )}
+
+        {/* INSURANCE PROMPT */}
+        {phase === 'playing' && dealerHand[0]?.rank === 'A' && myPub?.sideBets?.insurance === 0 && myPub?.bet > 0 && (
+          <div style={{ 
+            position:'absolute', bottom:100, left:'50%', transform:'translateX(-50%)',
+            background:'rgba(15,15,20,0.95)', border:'2px solid #f59e0b', borderRadius:16,
+            padding:'16px 24px', display:'flex', flexDirection:'column', alignItems:'center', gap:10,
+            zIndex:20, boxShadow:'0 10px 40px rgba(0,0,0,0.5), 0 0 20px rgba(245,158,11,0.2)',
+            backdropFilter:'blur(10px)'
+          }}>
+            <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+              <span style={{ fontSize:20 }}>🛡️</span>
+              <span style={{ color:'#f59e0b', fontWeight:800, fontSize:14, letterSpacing:'0.05em' }}>INSURANCE AVAILABLE</span>
+            </div>
+            <button 
+              className="btn btn-gold btn-md" 
+              style={{ background:'#f59e0b', color:'#000', fontWeight:700, width:'100%' }}
+              onClick={() => emit('place_insurance', { amount: myPub.bet / 2 })}
+            >
+              Protect for {(myPub.bet / 2).toLocaleString()}
+            </button>
+            <span style={{ fontSize:10, color:'rgba(255,255,255,0.5)' }}>Dealer shows Ace. Pays 2:1 on Blackjack.</span>
           </div>
         )}
 

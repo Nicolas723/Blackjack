@@ -1,4 +1,5 @@
 const { createDeck, shuffle, calculateScore, isBlackjack } = require('./deck');
+const { evaluatePerfectPairs, evaluate21Plus3, evaluateBustBonus } = require('./sideBets');
 
 function dealCard(room) {
   if (room.deck.length < 10) room.deck = shuffle(createDeck(6));
@@ -10,7 +11,10 @@ function startGame(room) {
   room.deck = shuffle(createDeck(6));
   room.dealerHand = [];
   room.dealerScore = 0;
-  room.turnOrder = Object.keys(room.players).filter(id => room.players[id].isConnected);
+  room.turnOrder = Object.keys(room.players).filter(id => {
+    const p = room.players[id];
+    return p.isConnected && p.bet > 0;
+  });
   room.currentTurnIndex = 0;
 
   // Deal 2 cards to every active player
@@ -24,6 +28,21 @@ function startGame(room) {
   // Dealer: first card visible, second face-down
   room.dealerHand = [dealCard(room), { ...dealCard(room), faceDown: true }];
   room.dealerScore = calculateScore(room.dealerHand);
+
+  // Evaluate Pairs and 21+3 immediately
+  for (const pid of room.turnOrder) {
+    const p = room.players[pid];
+    if (!p.sideBets) continue;
+
+    const ppWin = evaluatePerfectPairs(p.hand, p.sideBets.perfectPairs);
+    const tWin = evaluate21Plus3(p.hand, room.dealerHand[0], p.sideBets.twentyOnePlusThree);
+    
+    p.chips += (ppWin + tWin);
+    p.sideBetResults = {
+      perfectPairs: ppWin,
+      twentyOnePlusThree: tWin
+    };
+  }
 
   // Skip blackjack players at the front of the queue
   _skipNonPlaying(room);
@@ -49,16 +68,11 @@ function playerStand(room, playerId) {
   return _advanceTurn(room);
 }
 
-function dealerPlay(room) {
-  // Reveal hole card
-  if (room.dealerHand[1]) room.dealerHand[1] = { ...room.dealerHand[1], faceDown: false };
+function dealerDraw(room) {
+  const card = dealCard(room);
+  room.dealerHand.push(card);
   room.dealerScore = calculateScore(room.dealerHand);
-  // Draw to 17
-  while (room.dealerScore < 17) {
-    room.dealerHand.push(dealCard(room));
-    room.dealerScore = calculateScore(room.dealerHand);
-  }
-  return evaluateResults(room);
+  return card;
 }
 
 function evaluateResults(room) {
@@ -83,8 +97,37 @@ function evaluateResults(room) {
     }
 
     p.chips += payout;
-    results[pid] = { playerId: pid, username: p.username, outcome, payout, hand: p.hand, finalScore: p.score };
+    
+    // Insurance evaluation
+    if (p.sideBets?.insurance > 0 && isBlackjack(room.dealerHand)) {
+      const insWin = p.sideBets.insurance * 3; // 2:1 plus original bet back
+      p.chips += insWin;
+      if (!p.sideBetResults) p.sideBetResults = {};
+      p.sideBetResults.insurance = insWin;
+    }
+
+    // Bust Bonus evaluation
+    if (p.sideBets?.bustBonus > 0) {
+      const bbWin = evaluateBustBonus(room.dealerHand, p.sideBets.bustBonus);
+      if (bbWin > 0) {
+        p.chips += bbWin;
+        if (!p.sideBetResults) p.sideBetResults = {};
+        p.sideBetResults.bustBonus = bbWin;
+      }
+    }
+
+    results[pid] = { 
+      playerId: pid, 
+      username: p.username, 
+      outcome, 
+      payout, 
+      hand: p.hand, 
+      finalScore: p.score,
+      sideBetResults: p.sideBetResults
+    };
     p.bet = 0;
+    p.sideBets = { perfectPairs: 0, insurance: 0, twentyOnePlusThree: 0, bustBonus: 0 };
+    p.sideBetResults = null;
   }
   return results;
 }
@@ -108,4 +151,7 @@ function _skipNonPlaying(room) {
   ) { room.currentTurnIndex++; }
 }
 
-module.exports = { startGame, playerHit, playerStand, dealerPlay, getCurrentTurnPlayerId };
+module.exports = { 
+  startGame, playerHit, playerStand, dealerDraw, evaluateResults, calculateScore,
+  getCurrentTurnPlayerId 
+};
