@@ -137,9 +137,15 @@ export default function Game({ player, room, myHand, myScore, emit, on, off, onL
   const isDealAnimating = phase === 'playing' && dealProgress < (turnOrder.length * 2 + 2);
 
   return (
-    <div style={{ height:'100vh', display:'flex', flexDirection:'column', background:'radial-gradient(ellipse 160% 120% at 50% 0%, var(--felt-mid) 0%, var(--felt-dark) 70%)', overflow:'hidden' }}>
-      {toast  && <div className="toast" style={{ top: 80 }}>{toast}</div>}
-      {result && <div className="toast" style={{ borderColor:'var(--gold-light)', color:'var(--gold-light)', top: 140 }}>{result}</div>}
+    <div style={{ 
+      height:'100vh', 
+      display:'grid', 
+      gridTemplateRows: 'auto auto 1fr auto auto',
+      background:'radial-gradient(ellipse 160% 120% at 50% 0%, var(--felt-mid) 0%, var(--felt-dark) 70%)', 
+      overflow:'hidden' 
+    }}>
+      {toast  && <div className="toast" style={{ position:'fixed', top: 80, left:'50%', transform:'translateX(-50%)', zIndex:1000 }}>{toast}</div>}
+      {result && <div className="toast" style={{ position:'fixed', borderColor:'var(--gold-light)', color:'var(--gold-light)', top: 140, left:'50%', transform:'translateX(-50%)', zIndex:1000 }}>{result}</div>}
 
       {isWatchingAd && (
         <div style={{
@@ -208,7 +214,7 @@ export default function Game({ player, room, myHand, myScore, emit, on, off, onL
       </div>
 
       {/* ── Main table ────────────────────────────────────────── */}
-      <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'auto', justifyContent:'space-evenly' }}>
+      <div style={{ display:'flex', flexDirection:'column', overflow:'hidden', justifyContent:'space-evenly', minHeight: 0 }}>
 
         {/* Dealer zone */}
         <div style={{ padding:'10px 20px', display:'flex', flexDirection:'column', alignItems:'center', gap:8 }}>
@@ -223,7 +229,7 @@ export default function Game({ player, room, myHand, myScore, emit, on, off, onL
         <div className="divider-gold" style={{ margin:'0 40px' }} />
 
         {/* Players zone */}
-        <div style={{ display:'flex', justifyContent:'center', gap:10, flexWrap:'wrap', padding:'10px 16px', flex:1, alignItems:'center', overflow:'hidden' }}>
+        <div style={{ display:'flex', justifyContent:'center', gap:8, flexWrap:'wrap', padding:'8px 16px', overflow:'hidden', alignItems:'center' }}>
           {allPlayers.map(p => {
             const isMe      = p.id === player.playerId;
             const isCurrent = room.currentTurnPlayerId === p.id && phase === 'playing';
@@ -237,12 +243,12 @@ export default function Game({ player, room, myHand, myScore, emit, on, off, onL
                   ? 'linear-gradient(160deg, rgba(201,162,74,.1), rgba(0,0,0,.3))'
                   : 'var(--surface)',
                 border:`1px solid ${isCurrent ? 'rgba(201,162,74,.55)' : 'var(--border-dim)'}`,
-                borderRadius:18, padding:'16px',
-                display:'flex', flexDirection:'column', alignItems:'center', gap:10,
-                minWidth:220,
+                borderRadius:18, padding:'12px',
+                display:'flex', flexDirection:'column', alignItems:'center', gap:8,
+                minWidth:210,
                 boxShadow: isCurrent ? '0 0 32px rgba(201,162,74,.2)' : 'none',
                 transition:'all .3s ease',
-                transform: isMe ? 'scale(1.05)' : 'scale(0.9)',
+                transform: isMe ? 'scale(1.05)' : 'scale(0.85)',
               }}>
                 {/* Player header */}
                 <div style={{ textAlign:'center' }}>
@@ -295,7 +301,7 @@ export default function Game({ player, room, myHand, myScore, emit, on, off, onL
       </div>
 
       {/* ── Action bar ────────────────────────────────────────── */}
-      <div style={{ background:'rgba(0,0,0,.35)', borderTop:'1px solid var(--border)', padding:'12px 24px', flexShrink:0 }}>
+      <div style={{ background:'rgba(0,0,0,.35)', borderTop:'1px solid var(--border)', padding:'10px 24px', position:'relative', zIndex:10 }}>
 
         {/* BETTING */}
         {phase === 'betting' && myStatus === 'betting' && (

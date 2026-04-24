@@ -254,7 +254,10 @@ function registerHandlers(io, socket) {
   function requireRoom(allowedPhases = null) {
     const room = myRoom();
     if (!room) throw Errors.NOT_IN_ROOM();
-    if (allowedPhases && !allowedPhases.has(room.phase)) throw Errors.WRONG_PHASE(room.phase);
+    if (allowedPhases) {
+      const allowed = allowedPhases instanceof Set ? allowedPhases : new Set(allowedPhases);
+      if (!allowed.has(room.phase)) throw Errors.WRONG_PHASE(room.phase);
+    }
     return room;
   }
 
@@ -361,6 +364,8 @@ function registerHandlers(io, socket) {
 
     rm.addPlayer(room, p);
     p.currentRoomId = room.id;
+    if (room.phase === 'betting') p.status = 'betting'; // Permitir apostar si llegó a tiempo
+    
     socket.join(room.id);
 
     log.info('Player joined room', { roomId: room.id, username: p.username });
