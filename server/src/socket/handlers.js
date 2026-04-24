@@ -396,6 +396,24 @@ function registerHandlers(io, socket) {
     if (active.every(x => x.bet > 0)) startPlaying(room);
   }));
 
+  socket.on('restock_chips', safe(() => {
+    const p = requirePlayer();
+    if (p.chips < MIN_BET) {
+      p.chips = START_CHIPS;
+      socket.emit('registered', { 
+        playerId: p.id, 
+        username: p.username, 
+        chips: p.chips, 
+        currentRoomId: p.currentRoomId,
+        sessionId: p.id
+      });
+      log.info('Player restocked chips', { username: p.username });
+      
+      const room = p.currentRoomId ? rm.getRoom(p.currentRoomId) : null;
+      if (room) broadcast(room);
+    }
+  }));
+
   socket.on('player_action', safe(({ action } = {}) => {
     const p      = requirePlayer();
     const room   = requireRoom(PHASE_GUARDS.player_action);

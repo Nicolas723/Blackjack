@@ -251,21 +251,32 @@ export default function Game({ player, room, myHand, myScore, emit, on, off, onL
         {/* BETTING */}
         {phase === 'betting' && myStatus === 'betting' && (
           <div style={{ display:'flex', flexDirection:'column', gap:14, alignItems:'center' }}>
-            <p className="label">Place your bet</p>
-            <div style={{ display:'flex', gap:10, flexWrap:'wrap', justifyContent:'center' }}>
-              {CHIPS.map(c => (
-                <div key={c.val} className={`chip chip-${c.cls}`} onClick={() => addChip(c.val)} id={`chip-${c.cls}`} title={`+${c.label}`}>
-                  {c.label}
+            {player.chips < 10000 && bet === 0 ? (
+              <div style={{ textAlign: 'center' }}>
+                <p style={{ color: 'var(--red-bright)', marginBottom: 12, fontWeight: 600, fontSize: 16 }}>¡Te quedaste sin fondos!</p>
+                <button className="btn btn-gold btn-xl" onClick={() => emit('restock_chips')}>
+                  Recargar $1.000.000
+                </button>
+              </div>
+            ) : (
+              <>
+                <p className="label">Place your bet</p>
+                <div style={{ display:'flex', gap:10, flexWrap:'wrap', justifyContent:'center' }}>
+                  {CHIPS.map(c => (
+                    <div key={c.val} className={`chip chip-${c.cls}`} onClick={() => addChip(c.val)} id={`chip-${c.cls}`} title={`+${c.label}`}>
+                      {c.label}
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-            <div style={{ display:'flex', alignItems:'center', gap:16 }}>
-              <span className="bet-display">{bet > 0 ? bet.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }) : '–'}</span>
-              <button className="btn btn-ghost btn-sm" onClick={() => setBet(0)} disabled={bet === 0}>Clear</button>
-              <button id="place-bet-btn" className="btn btn-gold btn-xl" onClick={placeBet} disabled={bet < 10000}>
-                Confirm Bet
-              </button>
-            </div>
+                <div style={{ display:'flex', alignItems:'center', gap:16 }}>
+                  <span className="bet-display">{bet > 0 ? bet.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }) : '–'}</span>
+                  <button className="btn btn-ghost btn-sm" onClick={() => setBet(0)} disabled={bet === 0}>Clear</button>
+                  <button id="place-bet-btn" className="btn btn-gold btn-xl" onClick={placeBet} disabled={bet < 10000}>
+                    Confirm Bet
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         )}
 
