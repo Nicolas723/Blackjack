@@ -106,13 +106,13 @@ export default function Game({ player, room, myHand, myScore, emit, on, off, onL
   }, []);
 
   /* Flash result */
-  useEffect(() => {
     if (phase === 'results' && room.results?.[player.playerId]) {
       const r = room.results[player.playerId];
-      const map = { win:'🎉 You win!', blackjack:'🌟 Blackjack!', push:'🤝 Push — bet returned', bust:'💥 Bust!', loss:'😔 Dealer wins' };
+      const map = { win:'🎉 ¡Ganaste!', blackjack:'🌟 ¡Blackjack!', push:'🤝 Empate', bust:'💥 ¡Pasado!', loss:'😔 El Dealer gana' };
       setResult(map[r.outcome] || '');
+      setTimeout(() => setResult(''), 4000); // Clear result after 4s
     }
-  }, [phase]);
+  }, [phase, room.results, player.playerId]);
 
   useEffect(() => {
     try {
@@ -137,9 +137,9 @@ export default function Game({ player, room, myHand, myScore, emit, on, off, onL
   const isDealAnimating = phase === 'playing' && dealProgress < (turnOrder.length * 2 + 2);
 
   return (
-    <div style={{ minHeight:'100vh', display:'flex', flexDirection:'column', background:'radial-gradient(ellipse 160% 120% at 50% 0%, var(--felt-mid) 0%, var(--felt-dark) 70%)' }}>
-      {toast  && <div className="toast">{toast}</div>}
-      {result && <div className="toast" style={{ borderColor:'var(--gold-light)', color:'var(--gold-light)' }}>{result}</div>}
+    <div style={{ height:'100vh', display:'flex', flexDirection:'column', background:'radial-gradient(ellipse 160% 120% at 50% 0%, var(--felt-mid) 0%, var(--felt-dark) 70%)', overflow:'hidden' }}>
+      {toast  && <div className="toast" style={{ top: 80 }}>{toast}</div>}
+      {result && <div className="toast" style={{ borderColor:'var(--gold-light)', color:'var(--gold-light)', top: 140 }}>{result}</div>}
 
       {isWatchingAd && (
         <div style={{
@@ -211,7 +211,7 @@ export default function Game({ player, room, myHand, myScore, emit, on, off, onL
       <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'auto', justifyContent:'space-evenly' }}>
 
         {/* Dealer zone */}
-        <div style={{ padding:'36px 20px 20px', display:'flex', flexDirection:'column', alignItems:'center', gap:14 }}>
+        <div style={{ padding:'10px 20px', display:'flex', flexDirection:'column', alignItems:'center', gap:8 }}>
           <Hand
             cards={dealerHand.slice(0, getVisibleCount('dealer', null, dealerHand.length))}
             score={room.dealerScore}
@@ -223,7 +223,7 @@ export default function Game({ player, room, myHand, myScore, emit, on, off, onL
         <div className="divider-gold" style={{ margin:'0 40px' }} />
 
         {/* Players zone */}
-        <div style={{ display:'flex', justifyContent:'center', gap:14, flexWrap:'wrap', padding:'20px 16px', flex:1, alignItems:'flex-start' }}>
+        <div style={{ display:'flex', justifyContent:'center', gap:10, flexWrap:'wrap', padding:'10px 16px', flex:1, alignItems:'center', overflow:'hidden' }}>
           {allPlayers.map(p => {
             const isMe      = p.id === player.playerId;
             const isCurrent = room.currentTurnPlayerId === p.id && phase === 'playing';
@@ -237,11 +237,12 @@ export default function Game({ player, room, myHand, myScore, emit, on, off, onL
                   ? 'linear-gradient(160deg, rgba(201,162,74,.1), rgba(0,0,0,.3))'
                   : 'var(--surface)',
                 border:`1px solid ${isCurrent ? 'rgba(201,162,74,.55)' : 'var(--border-dim)'}`,
-                borderRadius:18, padding:'24px',
-                display:'flex', flexDirection:'column', alignItems:'center', gap:16,
-                minWidth:260,
+                borderRadius:18, padding:'16px',
+                display:'flex', flexDirection:'column', alignItems:'center', gap:10,
+                minWidth:220,
                 boxShadow: isCurrent ? '0 0 32px rgba(201,162,74,.2)' : 'none',
                 transition:'all .3s ease',
+                transform: isMe ? 'scale(1.05)' : 'scale(0.9)',
               }}>
                 {/* Player header */}
                 <div style={{ textAlign:'center' }}>
@@ -294,7 +295,7 @@ export default function Game({ player, room, myHand, myScore, emit, on, off, onL
       </div>
 
       {/* ── Action bar ────────────────────────────────────────── */}
-      <div style={{ background:'rgba(0,0,0,.35)', borderTop:'1px solid var(--border)', padding:'18px 24px', flexShrink:0 }}>
+      <div style={{ background:'rgba(0,0,0,.35)', borderTop:'1px solid var(--border)', padding:'12px 24px', flexShrink:0 }}>
 
         {/* BETTING */}
         {phase === 'betting' && myStatus === 'betting' && (

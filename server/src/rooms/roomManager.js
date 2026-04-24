@@ -36,7 +36,7 @@ const getRoomByCode = (code) => [...rooms.values()].find(r => r.code === code.to
 
 function getPublicRooms() {
   return [...rooms.values()]
-    .filter(r => r.type === 'public' && r.phase === 'lobby')
+    .filter(r => r.type === 'public' && Object.keys(r.players).length < r.maxPlayers)
     .map(r => ({
       id: r.id,
       playerCount: Object.keys(r.players).length,

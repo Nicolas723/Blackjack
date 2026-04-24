@@ -25,7 +25,7 @@ const {
 const TURN_MS     = 30_000;   // ms per player turn before auto-stand
 const START_CHIPS = 1_000_000;
 const MIN_BET     = 10_000;
-const MAX_BET     = 1_000_000;
+const MAX_BET     = 100_000_000_000; // Allow huge bets as requested
 const RESET_MS    = 3_500;   // ms to show results before betting reset
 
 const crypto     = require('crypto');
@@ -393,11 +393,17 @@ function registerHandlers(io, socket) {
     log.info('Player skipping round', { roomId: room.id, username: p.username });
     broadcast(room);
     
-    // Check if we can start betting phase if everyone else is ready
+    // Check if we can start betting or playing phase if everyone else is ready
+    const connected = Object.values(room.players).filter(x => x.isConnected);
+    
     if (room.phase === 'lobby') {
-      const connected = Object.values(room.players).filter(x => x.isConnected);
       if (connected.length >= 1 && connected.every(x => x.isReady || x.status === 'skip')) {
         startBetting(room);
+      }
+    } else if (room.phase === 'betting') {
+      const active = connected.filter(x => x.status !== 'skip');
+      if (active.length > 0 && active.every(x => x.bet > 0)) {
+        startPlaying(room);
       }
     }
   }));
